@@ -100,6 +100,10 @@ div[data-testid="stAlert"] {
     box-sizing: border-box !important;
 }
 
+div[data-testid="stAlert"] p {
+    color: #FFFFFF !important;
+}
+
 /* Selectbox label */
 div[data-testid="stSelectbox"] label,
 div[data-testid="stSelectbox"] label p {
