@@ -137,6 +137,12 @@ div[data-testid="stSelectbox"] label p {
     font-weight:bold !important;
 }
 
+.no-subjects-message {
+    font-family: 'Bitcount Prop Single', sans-serif !important;
+    color: white !important;
+    font-size: 1rem !important;
+}
+
         </style>
                 """, unsafe_allow_html=True)
 
@@ -218,6 +224,8 @@ def style_base_layout():
                 button:hover{
                     transform:scale(1.05)
                 }
+
+
 
         </style>
                 """, unsafe_allow_html=True)

@@ -95,7 +95,12 @@ def teacher_tab_take_attendance():
     subjects = get_teacher_subjects(teacher_id)
 
     if not subjects:
-        st.warning('You havent created any subjects yet! Please create one to begin!')
+        st.markdown("""
+        <div class="no-subjects-message" style="
+            background-color: #85877D;
+            padding: 20px 16px;">
+            You have not created any subjects yet! Please create one to begin!
+        </div>""", unsafe_allow_html=True)
         return
     
     subject_options = {f"{s['name']} - {s['subject_code']}": s['subject_id'] for s in subjects}
@@ -228,7 +233,12 @@ def teacher_tab_manage_subjects():
                     sub['subject_code']
                 )
     else:
-        st.info("NO SUBJECTS FOUND. CREATE ONE ABOVE")
+        st.markdown("""
+        <div class="no-subjects-message" style="
+            background-color: #85877D;
+            padding: 20px 16px;">
+            NO SUBJECTS FOUND. CREATE ONE ABOVE
+        </div>""", unsafe_allow_html=True) 
 
 
 
@@ -240,6 +250,12 @@ def teacher_tab_attendance_records():
     records = get_attendance_for_teacher(teacher_id)
 
     if not records:
+        st.markdown("""
+        <div class="no-subjects-message" style="
+            background-color: #85877D;
+            padding: 20px 16px;">
+            No records.
+        </div>""", unsafe_allow_html=True)
         return
     
     data = []
