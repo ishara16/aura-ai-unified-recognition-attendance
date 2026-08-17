@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from backend.database.supabase import supabase
+from backend.api.auth import router as auth_router
 
 app = FastAPI(
     title="AURA API",
@@ -8,6 +8,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.include_router(auth_router)
 
 @app.get("/")
 def root():
