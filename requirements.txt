@@ -22,3 +22,11 @@ pillow #image preProcessing , many operations for image
 librosa
 resemblyzer
 
+
+fastapi
+uvicorn
+pydantic-settings
+python-jose[cryptography]
+pytest
+httpx
+
