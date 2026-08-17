@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 
+from backend.database.supabase import supabase
+
 app = FastAPI(
     title="AURA API",
     description="AI Unified Recognition Attendance API",
