@@ -9,5 +9,21 @@ security = HTTPBearer()
 
 def get_current_teacher(
     credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> int:
+) -> dict:
     return verify_access_token(credentials.credentials)
+
+
+def get_current_student(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> int:
+    user = verify_access_token(credentials.credentials)
+
+    if user["role"] != "student":
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=403,
+            detail="Student access required"
+        )
+
+    return user["user_id"]

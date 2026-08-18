@@ -1,19 +1,19 @@
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt
-
-from backend.config import settings
-
 from fastapi import HTTPException
 from jose import JWTError, jwt
 
-def create_access_token(teacher_id: int) -> str:
+from backend.config import settings
+
+
+def create_access_token(user_id: int, role: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     payload = {
-        "sub": str(teacher_id),
+        "sub": str(user_id),
+        "role": role,
         "exp": expire
     }
 
@@ -23,7 +23,8 @@ def create_access_token(teacher_id: int) -> str:
         algorithm=settings.JWT_ALGORITHM
     )
 
-def verify_access_token(token: str) -> int:
+
+def verify_access_token(token: str) -> dict:
     try:
         payload = jwt.decode(
             token,
@@ -31,15 +32,19 @@ def verify_access_token(token: str) -> int:
             algorithms=[settings.JWT_ALGORITHM]
         )
 
-        teacher_id = payload.get("sub")
+        user_id = payload.get("sub")
+        role = payload.get("role")
 
-        if teacher_id is None:
+        if user_id is None or role is None:
             raise HTTPException(
                 status_code=401,
                 detail="Invalid authentication token"
             )
 
-        return int(teacher_id)
+        return {
+            "user_id": int(user_id),
+            "role": role
+        }
 
     except (JWTError, ValueError):
         raise HTTPException(

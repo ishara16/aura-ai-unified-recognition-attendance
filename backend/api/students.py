@@ -19,7 +19,7 @@ router = APIRouter(
     response_model=list[StudentResponse]
 )
 def get_students(
-    current_teacher=Depends(get_current_teacher)
+    current_teacher: dict = Depends(get_current_teacher)
 ):
     return get_all_students()
 
@@ -30,7 +30,7 @@ def get_students(
 )
 def get_student(
     student_id: int,
-    current_teacher=Depends(get_current_teacher)
+    current_teacher: dict = Depends(get_current_teacher)
 ):
     student = get_student_by_id(student_id)
 

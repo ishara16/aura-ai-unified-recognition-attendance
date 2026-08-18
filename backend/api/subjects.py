@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.core.dependencies import get_current_teacher
-from backend.schemas.subject import CreateSubjectRequest,SubjectResponse
-from backend.services.subject_service import create_teacher_subject, get_subjects_for_teacher
+from backend.schemas.subject import CreateSubjectRequest, SubjectResponse
+from backend.services.subject_service import (
+    create_teacher_subject,
+    get_subjects_for_teacher
+)
 
 
 router = APIRouter(
@@ -18,8 +21,10 @@ router = APIRouter(
 )
 def create_subject_endpoint(
     request: CreateSubjectRequest,
-    teacher_id: int = Depends(get_current_teacher)
+    current_teacher: dict = Depends(get_current_teacher)
 ):
+    teacher_id = current_teacher["user_id"]
+
     try:
         result = create_teacher_subject(
             request.subject_code,
@@ -45,6 +50,8 @@ def create_subject_endpoint(
 
 @router.get("")
 def get_subjects(
-    teacher_id: int = Depends(get_current_teacher)
+    current_teacher: dict = Depends(get_current_teacher)
 ):
+    teacher_id = current_teacher["user_id"]
+
     return get_subjects_for_teacher(teacher_id)

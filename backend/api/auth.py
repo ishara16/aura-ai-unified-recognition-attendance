@@ -1,11 +1,11 @@
-from fastapi import APIRouter, HTTPException , Depends
+from fastapi import APIRouter, HTTPException, Depends
 
 from backend.schemas.auth import TeacherLoginRequest
 from backend.services.auth_service import authenticate_teacher
-from backend.core.security import create_access_token
 
 from backend.core.dependencies import get_current_teacher
 from backend.database.supabase import supabase
+
 
 router = APIRouter(
     prefix="/api/auth",
@@ -15,22 +15,21 @@ router = APIRouter(
 
 @router.post("/teacher/login")
 def teacher_login(request: TeacherLoginRequest):
-    teacher = authenticate_teacher(
+    result = authenticate_teacher(
         request.username,
         request.password
     )
 
-    if teacher is None:
+    if result is None:
         raise HTTPException(
             status_code=401,
             detail="Invalid username or password"
         )
 
-    teacher.pop("password", None)
+    teacher = result["teacher"]
+    access_token = result["access_token"]
 
-    access_token = create_access_token(
-        teacher["teacher_id"]
-    )
+    teacher.pop("password", None)
 
     return {
         "message": "Teacher login successful",
@@ -39,10 +38,13 @@ def teacher_login(request: TeacherLoginRequest):
         "teacher": teacher
     }
 
+
 @router.get("/me")
 def get_current_teacher_info(
-    teacher_id: int = Depends(get_current_teacher)
+    current_teacher: dict = Depends(get_current_teacher)
 ):
+    teacher_id = current_teacher["user_id"]
+
     response = (
         supabase
         .table("teachers")

@@ -28,8 +28,9 @@ router = APIRouter(
 )
 def create_attendance(
     request: CreateAttendanceRequest,
-    teacher_id: int = Depends(get_current_teacher)
+    current_teacher: dict = Depends(get_current_teacher)
 ):
+    teacher_id = current_teacher["user_id"]
 
     # Check that the subject belongs to the logged-in teacher
     subject = get_subject_for_teacher(
@@ -71,6 +72,8 @@ def create_attendance(
     response_model=list[AttendanceResponse]
 )
 def get_attendance(
-    teacher_id: int = Depends(get_current_teacher)
+    current_teacher: dict = Depends(get_current_teacher)
 ):
+    teacher_id = current_teacher["user_id"]
+
     return get_teacher_attendance(teacher_id)
