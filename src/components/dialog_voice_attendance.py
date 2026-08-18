@@ -1,11 +1,9 @@
 import streamlit as st
 
 from src.pipelines.voice_pipeline import process_bulk_audio
-
-from src.database.config import supabase
+from src.api.subjects import get_subject_voice_students
 
 import pandas as pd
-
 
 from src.components.dialog_attendance_results import show_attendance_result
 from datetime import datetime
@@ -14,15 +12,17 @@ from datetime import datetime
 def voice_attendance_dialog(selected_subject_id):
     st.write('Record audio of students saying I am present. Then AI will recognize the students')
 
-
     audio_data = None
 
     audio_data = st.audio_input("Record classroom audio")
 
     if st.button('Analyze Audio', width='stretch', type='primary'):
-        with st.spinner('Prcessing Audio data'):
-            enrolled_res = supabase.table('subject_students').select("*, students(*)").eq('subject_id',selected_subject_id ).execute()
-            enrolled_students = enrolled_res.data
+        with st.spinner('Processing Audio data'):
+            token = st.session_state.access_token
+            enrolled_students = get_subject_voice_students(
+                token,
+                selected_subject_id
+            )
 
             if not enrolled_students:
                 st.warning('No students enrolled in this course')

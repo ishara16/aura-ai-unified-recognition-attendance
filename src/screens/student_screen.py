@@ -7,7 +7,10 @@ from PIL import Image
 import numpy as np
 from src.pipelines.face_pipeline import predict_attendance, get_face_embeddings, train_classifier
 from src.pipelines.voice_pipeline import get_voice_embedding
-from src.database.db import get_all_students, create_student, get_student_subjects, get_student_attendance, unenroll_student_to_subject
+from src.api.students import create_student
+from src.api.attendance import get_student_attendance
+from src.api.enrollments import get_my_subjects, unenroll_subject
+from src.api.student_auth import student_face_login
 import time
 
 from src.components.dialog_enroll import enroll_dialog
@@ -34,9 +37,13 @@ def student_dashboard():
 
 
     with st.spinner('Loading your enrolled subjects..'):
-        subjects = get_student_subjects(student_id)
-        logs = get_student_attendance(student_id)
-
+        token = st.session_state.access_token
+        subjects = get_my_subjects(token)
+        logs = get_student_attendance(token)
+    if not subjects:
+        st.info("You haven't enrolled in any subjects yet. Please enroll in a subject to start tracking your attendance.")
+        footer_dashboard()
+        return
     stats_map = {}
 
     for log in logs:
@@ -60,7 +67,8 @@ def student_dashboard():
 
         def unenroll_button(subject_id=sid, subject_name=sub['name']):
             if st.button("Unenroll from this course", key=f"unenroll_{student_id}_{subject_id}", type='tertiary', width='stretch', icon=':material/delete_forever:'):
-                unenroll_student_to_subject(student_id,  subject_id)
+                token = st.session_state.access_token
+                unenroll_subject(token, subject_id)
                 st.toast(f'Unenrolled from {subject_name} successfully!')
                 st.rerun()
 
@@ -99,37 +107,47 @@ def student_screen():
         unsafe_allow_html=True
     )
 
-    photo_source = st.camera_input("")
+    photo_source = st.camera_input(
+        "Camera",
+        label_visibility="collapsed"
+    )
 
     if photo_source:
         img= np.array(Image.open(photo_source))
         with st.spinner("AI is scanning..."):
-            detected, all_ids , num_faces=predict_attendance(img)
+            encodings = get_face_embeddings(img)
 
-            if num_faces==0:
+            if len(encodings) == 0:
                 st.warning("Face not found!")
-            elif num_faces>1:
+            elif len(encodings) > 1:
                 st.warning("Multiple faces found!")
             else:
-                if detected:
-                    student_id=list(detected.keys())[0]
-                    all_students=get_all_students()
-                    student = next((s for s in all_students if s["student_id"]==student_id), None)
+                try:
+                    face_embedding = encodings[0].tolist()
 
-                    if student:
-                        st.session_state.is_logged_in=True
-                        st.session_state.user_role="student"
-                        st.session_state.student_data=student
-                        st.toast(f"Welcome Back, {student['name']}!")
-                        time.sleep(1)
-                        st.rerun()
-                else:
-                    st.markdown(
-                        '<div class="face-not-recognized">Face not recognized, you might be a new student</div>',
-                        unsafe_allow_html=True
+                    login_response = student_face_login(
+                        face_embedding
                     )
-                    show_registration=True
 
+                    student = login_response["student"]
+
+                    st.session_state.access_token = login_response["access_token"]
+                    st.session_state.is_logged_in = True
+                    st.session_state.user_role = "student"
+                    st.session_state.student_data = student
+
+                    st.toast(
+                        f"Welcome Back, {student['name']}!"
+                    )
+
+                    time.sleep(1)
+                    st.rerun()
+
+                except Exception as e:
+                    if "401" in str(e):
+                        st.error("Face not recognized. Please try again.")
+                    else:
+                        st.error(f"Face login failed: {e}")
     if show_registration:
         with st.container(border=True):
             st.header("Register new profile")
@@ -166,10 +184,10 @@ def student_screen():
                             response_data=create_student(new_name,face_embedding=face_emb, voice_embedding=voice_emb)
 
                             if response_data:
-                                train_classifier()
+                                train_classifier(st.session_state.access_token)
                                 st.session_state.is_logged_in=True
                                 st.session_state.user_role="student"
-                                st.session_state.student_data=response_data[0]
+                                st.session_state.student_data=response_data
                                 st.toast(f"Profile created! Hi {new_name}!")
                                 time.sleep(1)
                                 st.rerun()
