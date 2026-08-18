@@ -1,4 +1,5 @@
 import streamlit as st
+from src.core.session import clear_auth_session
 
 def header_home():
     logo_path="assets/aura_logo.png"
@@ -31,6 +32,7 @@ def header_dashboard(current_role=None):
 
     with col3:
         if st.button("Go back to Home",key="back_home",shortcut="escape",width="stretch"):
+            clear_auth_session()           
             st.session_state['login_type'] = None
             st.rerun()
 
@@ -44,9 +46,8 @@ def header_dashboard(current_role=None):
                 shortcut="control+backspace",
                 width="stretch"
             ):
-                st.session_state['is_logged_in'] = False
-                st.session_state.pop("teacher_data", None)
-                st.session_state.pop("user_role", None)
+                clear_auth_session()
+                st.session_state["login_type"] = None
                 st.rerun()
 
         elif current_role == "student" and "student_data" in st.session_state:
@@ -57,9 +58,8 @@ def header_dashboard(current_role=None):
                 shortcut="control+backspace",
                 width="stretch"
             ):
-                st.session_state['is_logged_in'] = False
-                st.session_state.pop("student_data", None)
-                st.session_state.pop("user_role", None)
+                clear_auth_session()
+                st.session_state["login_type"] = None
                 st.rerun()
         
 

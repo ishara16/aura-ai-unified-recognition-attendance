@@ -1,17 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from backend.core.dependencies import get_current_teacher
+from backend.core.dependencies import (
+    get_current_teacher,
+    get_current_student
+)
 
 from backend.schemas.attendance import (
     CreateAttendanceRequest,
-    AttendanceResponse
+    AttendanceResponse,
+    AttendanceWithSubjectResponse
 )
 
 from backend.services.attendance_service import (
     get_subject_for_teacher,
     student_exists,
     create_attendance_record,
-    get_teacher_attendance
+    get_teacher_attendance,
+    get_student_attendance
 )
 
 
@@ -55,7 +60,8 @@ def create_attendance(
         attendance = create_attendance_record(
             subject_id=request.subject_id,
             student_id=request.student_id,
-            is_present=request.is_present
+            is_present=request.is_present,
+            timestamp=request.timestamp
         )
 
         return attendance
@@ -69,7 +75,7 @@ def create_attendance(
 
 @router.get(
     "",
-    response_model=list[AttendanceResponse]
+    response_model=list[AttendanceWithSubjectResponse]
 )
 def get_attendance(
     current_teacher: dict = Depends(get_current_teacher)
@@ -77,3 +83,12 @@ def get_attendance(
     teacher_id = current_teacher["user_id"]
 
     return get_teacher_attendance(teacher_id)
+
+
+@router.get(
+    "/me",
+)
+def get_my_attendance(
+    student_id: int = Depends(get_current_student)
+):
+    return get_student_attendance(student_id)

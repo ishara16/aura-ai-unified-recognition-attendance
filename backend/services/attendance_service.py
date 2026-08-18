@@ -32,12 +32,14 @@ def student_exists(student_id: int):
 def create_attendance_record(
     subject_id: int,
     student_id: int,
-    is_present: bool
+    is_present: bool,
+    timestamp
 ):
     data = {
         "subject_id": subject_id,
         "student_id": student_id,
-        "is_present": is_present
+        "is_present": is_present,
+        "timestamp": timestamp.isoformat()
     }
 
     response = (
@@ -54,8 +56,23 @@ def get_teacher_attendance(teacher_id: int):
     response = (
         supabase
         .table("attendance_logs")
-        .select("*, subjects!inner(*)")
+        .select(
+            "id, timestamp, subject_id, student_id, is_present, "
+            "subjects!inner(name, subject_code)"
+        )
         .eq("subjects.teacher_id", teacher_id)
+        .order("timestamp", desc=True)
+        .execute()
+    )
+
+    return response.data
+
+def get_student_attendance(student_id: int):
+    response = (
+        supabase
+        .table("attendance_logs")
+        .select("*, subjects(subject_id, name, subject_code, section)")
+        .eq("student_id", student_id)
         .order("timestamp", desc=True)
         .execute()
     )

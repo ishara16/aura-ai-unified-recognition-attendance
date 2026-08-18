@@ -1,7 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends
 
-from backend.schemas.auth import TeacherLoginRequest
-from backend.services.auth_service import authenticate_teacher
+from backend.schemas.auth import (
+    TeacherLoginRequest,
+    TeacherRegisterRequest
+)
+
+from backend.services.auth_service import (
+    authenticate_teacher,
+    register_teacher
+)
 
 from backend.core.dependencies import get_current_teacher
 from backend.database.supabase import supabase
@@ -38,6 +45,27 @@ def teacher_login(request: TeacherLoginRequest):
         "teacher": teacher
     }
 
+@router.post("/teacher/register")
+def teacher_register(request: TeacherRegisterRequest):
+
+    result = register_teacher(
+        request.username,
+        request.password,
+        request.name
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Username already taken"
+        )
+
+    result.pop("password", None)
+
+    return {
+        "message": "Teacher registered successfully",
+        "teacher": result
+    }
 
 @router.get("/me")
 def get_current_teacher_info(

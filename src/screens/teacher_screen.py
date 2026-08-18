@@ -5,10 +5,16 @@ from src.ui.base_layout import style_background_dashboard, style_base_layout
 from src.components.header import header_dashboard
 from src.components.footer import footer_dashboard
 from src.components.subject_card import subject_card
-from src.database.db import check_teacher_exists, create_teacher, teacher_login, get_teacher_subjects, get_attendance_for_teacher
+from src.api.auth import teacher_login, teacher_register
+from src.api.subjects import get_teacher_subjects
+from src.api.subjects import get_subject_students
+from src.api.attendance import get_teacher_attendance
 from src.components.dialog_create_subject import create_subject_dialog
 from src.components.dialog_share_subject import share_subject_dialog
 from src.components.dialog_add_photo import add_photos_dialog
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from src.pipelines.face_pipeline import predict_attendance
 from src.components.dialog_attendance_results import attendance_result_dialog
@@ -17,8 +23,6 @@ import numpy as np
 from datetime import datetime
 
 import pandas as pd
-
-from src.database.config import supabase
 
 
 from src.components.dialog_voice_attendance import voice_attendance_dialog
@@ -92,7 +96,9 @@ def teacher_tab_take_attendance():
     if 'attendance_images' not in st.session_state:
         st.session_state.attendance_images = []
 
-    subjects = get_teacher_subjects(teacher_id)
+    subjects = get_teacher_subjects(
+        st.session_state.access_token
+    )
 
     if not subjects:
         st.markdown("""
@@ -143,9 +149,11 @@ def teacher_tab_take_attendance():
             with st.spinner('Deep scanning classroom photos...'):
                 all_detected_ids = {}
 
+                token = st.session_state.access_token
+                
                 for idx, img in enumerate(st.session_state.attendance_images):
                     img_np = np.array(img.convert('RGB'))
-                    detected, _, _ = predict_attendance(img_np)
+                    detected, _, _ = predict_attendance(img_np,token)
 
 
                     if detected:
@@ -154,8 +162,12 @@ def teacher_tab_take_attendance():
 
                             all_detected_ids.setdefault(student_id, []).append(f"Photo {idx+1}")
 
-                enrolled_res = supabase.table('subject_students').select("*, students(*)").eq('subject_id',selected_subject_id ).execute()
-                enrolled_students = enrolled_res.data
+                token = st.session_state.access_token
+
+                enrolled_students = get_subject_students(
+                    token,
+                    selected_subject_id
+                )
 
                 if not enrolled_students:
                     warning_placeholder.warning('No students enrolled in this course')
@@ -163,7 +175,7 @@ def teacher_tab_take_attendance():
 
                     results, attendance_to_log  = [], []
 
-                    current_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                    current_timestamp = datetime.now(ZoneInfo("Asia/Kolkata")).isoformat()
 
 
                     for node in enrolled_students:
@@ -203,11 +215,13 @@ def teacher_tab_manage_subjects():
 
     with col2:
         if st.button('Create New Subject', width='stretch'):
-            create_subject_dialog(teacher_id)
+            create_subject_dialog()
 
 
     # LIST all SUBJECTS
-    subjects = get_teacher_subjects(teacher_id)
+    subjects = get_teacher_subjects(
+        st.session_state.access_token
+    )
     if subjects:
         for sub in subjects:
 
@@ -245,9 +259,9 @@ def teacher_tab_manage_subjects():
 def teacher_tab_attendance_records():
     st.header('Attendance Records')
 
-    teacher_id = st.session_state.teacher_data['teacher_id']
+    token = st.session_state.access_token
 
-    records = get_attendance_for_teacher(teacher_id)
+    records = get_teacher_attendance(token)
 
     if not records:
         st.markdown("""
@@ -265,7 +279,12 @@ def teacher_tab_attendance_records():
 
         data.append({
             "ts_group": ts.split(".")[0] if ts else None,
-            "Time": datetime.fromisoformat(ts).strftime("%Y-%m-%d %I:%M %p") if ts else "N'A",
+            "Time": (
+                datetime.fromisoformat(ts)
+                .astimezone(ZoneInfo("Asia/Kolkata"))
+                .strftime("%Y-%m-%d %H:%M")
+                if ts else "N'A"
+            ),
             "Subject": r['subjects']['name'],
             "Subject Code":r['subjects']['subject_code'],
             "is_present": bool(r.get('is_present', False))
@@ -302,15 +321,19 @@ def teacher_tab_attendance_records():
 def login_teacher(username,password):
     if not username or not password:
         return False
-    teacher = teacher_login(username,password)
+    
+    try:
+        response = teacher_login(username, password)
 
-    if teacher:
-        st.session_state.user_role="teacher"
-        st.session_state.teacher_data=teacher
-        st.session_state.is_logged_in=True
+        st.session_state.user_role = "teacher"
+        st.session_state.teacher_data = response["teacher"]
+        st.session_state.access_token = response["access_token"]
+        st.session_state.is_logged_in = True
+
         return True
 
-    return False
+    except Exception:
+        return False
 
 def teacher_screen_login():
 
@@ -345,19 +368,34 @@ def teacher_screen_login():
 
 
 
-def register_teacher(teacher_username, teacher_name, teacher_pass, teacher_pass_confirm):
+def register_teacher(
+    teacher_username,
+    teacher_name,
+    teacher_pass,
+    teacher_pass_confirm
+):
     if not teacher_username or not teacher_name or not teacher_pass:
         return False, "All Fields are required!"
-    if check_teacher_exists(teacher_username):
-        return False, "Username already taken"
+
     if teacher_pass != teacher_pass_confirm:
-        return False,"Password doesn't match"
+        return False, "Password doesn't match"
 
     try:
-        create_teacher(teacher_username, teacher_pass, teacher_name)
-        return True,"Successfully created, Login now!"
+        teacher_register(
+            teacher_username,
+            teacher_name,
+            teacher_pass
+        )
+
+        return True, "Successfully created, Login now!"
+
     except Exception as e:
-        return False,"Unexpected Error!"
+        error = str(e)
+
+        if "409" in error:
+            return False, "Username already taken"
+
+        return False, "Unexpected Error!"
 
     
 def teacher_screen_register():

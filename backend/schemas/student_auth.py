@@ -5,6 +5,9 @@ class StudentLoginRequest(BaseModel):
     student_id: int
 
 
+class StudentFaceLoginRequest(BaseModel):
+    face_embedding: list[float]
+
 class StudentResponse(BaseModel):
     student_id: int
     name: str

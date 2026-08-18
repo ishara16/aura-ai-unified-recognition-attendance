@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.core.dependencies import get_current_teacher
-from backend.schemas.student import StudentResponse
+from backend.schemas.student import (
+    CreateStudentRequest,
+    StudentResponse
+)
 from backend.services.student_service import (
+    create_student,
     get_all_students,
     get_student_by_id,
 )
@@ -13,6 +17,34 @@ router = APIRouter(
     tags=["Students"]
 )
 
+@router.post(
+    "",
+    response_model=StudentResponse,
+    status_code=201
+)
+def create_student_endpoint(
+    request: CreateStudentRequest
+):
+    try:
+        result = create_student(
+            request.name,
+            request.face_embedding,
+            request.voice_embedding
+        )
+
+        if not result:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to create student"
+            )
+
+        return result[0]
+
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create student"
+        )
 
 @router.get(
     "",

@@ -66,3 +66,27 @@ def get_student_subjects(student_id: int):
     )
 
     return response.data
+
+def get_subject_students(subject_id: int):
+    response = (
+        supabase
+        .table("subject_students")
+        .select("student_id, students(student_id, name)")
+        .eq("subject_id", subject_id)
+        .execute()
+    )
+
+    return response.data
+
+def get_subject_voice_students(subject_id: int):
+    response = (
+        supabase
+        .table("subject_students")
+        .select(
+            "student_id, students(student_id, name, voice_embedding)"
+        )
+        .eq("subject_id", subject_id)
+        .execute()
+    )
+
+    return response.data

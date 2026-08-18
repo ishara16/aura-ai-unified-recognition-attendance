@@ -4,7 +4,7 @@ import face_recognition_models
 from sklearn.svm import SVC
 import streamlit as st
 
-from src.database.db import get_all_students
+from src.api.students import get_all_students
 
 @st.cache_resource
 def load_dlib_models():
@@ -34,11 +34,11 @@ def get_face_embeddings(image_np):
     return encodings
 
 @st.cache_resource
-def get_trained_model():
+def get_trained_model(token):
     X = []
     Y = []
 
-    student_db=get_all_students()
+    student_db=get_all_students(token)
 
     if not student_db:
         return None
@@ -61,12 +61,12 @@ def get_trained_model():
     return {'clf':clf, 'X':X, 'Y':Y}
 
     
-def train_classifier():
+def train_classifier(token):
     st.cache_resource.clear()
-    model_data=get_trained_model()
+    model_data=get_trained_model(token)
     return bool(model_data)
 
-def predict_attendance(class_image_np):
+def predict_attendance(class_image_np,token):
     encodings = get_face_embeddings(class_image_np)
 
     detected_student= {}
@@ -74,7 +74,7 @@ def predict_attendance(class_image_np):
     if len(encodings) == 0:
         return {}, [], 0
     
-    model_data=get_trained_model()
+    model_data=get_trained_model(token)
 
     if not model_data:
         return {}, [] , len(encodings) 
