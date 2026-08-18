@@ -2,6 +2,8 @@ from fastapi import FastAPI
 
 from backend.api.auth import router as auth_router
 from backend.api.subjects import router as subjects_router
+from backend.api.attendance import router as attendance_router
+from backend.api import students
 
 app = FastAPI(
     title="AURA API",
@@ -11,6 +13,8 @@ app = FastAPI(
 
 app.include_router(auth_router)
 app.include_router(subjects_router)
+app.include_router(attendance_router)
+app.include_router(students.router)
 
 @app.get("/")
 def root():

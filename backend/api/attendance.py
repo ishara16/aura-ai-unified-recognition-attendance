@@ -1,0 +1,76 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from backend.core.dependencies import get_current_teacher
+
+from backend.schemas.attendance import (
+    CreateAttendanceRequest,
+    AttendanceResponse
+)
+
+from backend.services.attendance_service import (
+    get_subject_for_teacher,
+    student_exists,
+    create_attendance_record,
+    get_teacher_attendance
+)
+
+
+router = APIRouter(
+    prefix="/api/attendance",
+    tags=["Attendance"]
+)
+
+
+@router.post(
+    "",
+    response_model=AttendanceResponse,
+    status_code=status.HTTP_201_CREATED
+)
+def create_attendance(
+    request: CreateAttendanceRequest,
+    teacher_id: int = Depends(get_current_teacher)
+):
+
+    # Check that the subject belongs to the logged-in teacher
+    subject = get_subject_for_teacher(
+        request.subject_id,
+        teacher_id
+    )
+
+    if not subject:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this subject"
+        )
+
+    # Check that the student exists
+    if not student_exists(request.student_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+        )
+
+    try:
+        attendance = create_attendance_record(
+            subject_id=request.subject_id,
+            student_id=request.student_id,
+            is_present=request.is_present
+        )
+
+        return attendance
+
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create attendance record"
+        )
+
+
+@router.get(
+    "",
+    response_model=list[AttendanceResponse]
+)
+def get_attendance(
+    teacher_id: int = Depends(get_current_teacher)
+):
+    return get_teacher_attendance(teacher_id)
